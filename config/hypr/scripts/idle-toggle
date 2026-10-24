@@ -1,0 +1,21 @@
+#!/bin/sh
+# Toggle hypridle — the idle daemon that dims, locks and turns the screen off.
+#
+#   Ctrl+Super+I          -> this script (bound in hyprland.conf)
+#   waybar indicator      -> click it (it sits next to the clock)
+#
+# Idle ON  = hypridle running: dim 5m, lock 5m30s, screen off 5m50s
+# Idle OFF = hypridle stopped: screen stays awake ("caffeine" mode)
+
+if pgrep -x hypridle >/dev/null 2>&1; then
+    systemctl --user stop hypridle.service 2>/dev/null || pkill -x hypridle
+    notify-send -a hypridle -i preferences-desktop-screensaver \
+        "Idle actions OFF" "Screen will not dim, lock or turn off" 2>/dev/null || true
+else
+    systemctl --user start hypridle.service 2>/dev/null || (setsid hypridle >/dev/null 2>&1 &)
+    notify-send -a hypridle -i preferences-desktop-screensaver \
+        "Idle actions ON" "Dim 5m · lock 5m30s · screen off 5m50s" 2>/dev/null || true
+fi
+
+# nudge waybar (RTMIN+9) so the indicator updates instantly
+pkill -RTMIN+9 waybar 2>/dev/null || true

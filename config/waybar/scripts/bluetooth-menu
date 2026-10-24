@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+#
+# bluetooth-menu — a rofi front-end for bluetoothctl.
+# Left-click the waybar "bluetooth" module to power the adapter,
+# scan, connect, disconnect, pair or forget devices.
+
+set -uo pipefail
+
+ROFI=(rofi -dmenu -i -no-custom -p Bluetooth
+      -theme-str 'window {width: 440px;}'
+      -theme-str 'listview {lines: 12;}'
+      -theme-str 'element-text {vertical-align: 0.5;}')
+
+notify() {
+    command -v notify-send >/dev/null 2>&1 && notify-send -a waybar "$@"
+    return 0
+}
+
+powered() { bluetoothctl show 2>/dev/null | grep -q 'Powered: yes'; }
+
+# fill NAME_OF / CONNECTED_SET / PAIRED_SET from bluetoothctl
+declare -A NAME_OF=() CONNECTED_SET=() PAIRED_SET=()
+
+load_devices() {
+    local _ mac name
+    while read -r _ mac name; do
+        [[ -z "$mac" ]] && continue
+        NAME_OF["$mac"]="$name"
+    done < <(bluetoothctl devices 2>/dev/null)
+
+    while read -r _ mac _; do [[ -n "$mac" ]] && CONNECTED_SET["$mac"]=1; done \
+        < <(bluetoothctl devices Connected 2>/dev/null)
+
+    while read -r _ mac _; do [[ -n "$mac" ]] && PAIRED_SET["$mac"]=1; done \
+        < <(bluetoothctl devices Paired 2>/dev/null)
+}
+
+connect_device() {
+    local mac="$1" name="$2"
+    notify "󰂯  Bluetooth" "Connecting to $name…"
+    bluetoothctl --timeout 20 connect "$mac" >/dev/null 2>&1
+    if bluetoothctl info "$mac" 2>/dev/null | grep -q 'Connected: yes'; then
+        bluetoothctl trust "$mac" >/dev/null 2>&1
+        notify "󰂱  Bluetooth" "Connected to $name"
+    else
+        notify "󰂲  Bluetooth" "Could not connect to $name"
+    fi
+}
+
+# ── build the menu ───────────────────────────────────────────────────────────
+declare -A MAC_OF=()
+menu=()
+
+if powered; then
+    load_devices
+    mesg="Bluetooth is <b>on</b>"
+    menu+=("   Turn Bluetooth off")
+    menu+=("󰂰  Scan for devices")
+
+    ordered=()
+    for mac in "${!CONNECTED_SET[@]}"; do ordered+=("$mac"); done
+    for mac in "${!PAIRED_SET[@]}";    do [[ -n "${CONNECTED_SET[$mac]:-}" ]] || ordered+=("$mac"); done
+    for mac in "${!NAME_OF[@]}";       do
+        [[ -n "${CONNECTED_SET[$mac]:-}" || -n "${PAIRED_SET[$mac]:-}" ]] || ordered+=("$mac")
+    done
+
+    for mac in "${ordered[@]}"; do
+        name="${NAME_OF[$mac]:-Unknown device}"
+        [[ -z "$name" ]] && name="Unknown device"
+        if [[ -n "${CONNECTED_SET[$mac]:-}" ]]; then
+            disp="   ✔ 󰂱 ${name}"
+        else
+            disp="   󰂯 ${name}"
+        fi
+        while [[ -n "${MAC_OF[$disp]+x}" ]]; do disp+=" "; done
+        MAC_OF["$disp"]="$mac"
+        menu+=("$disp")
+    done
+else
+    mesg="Bluetooth is <b>off</b>"
+    menu+=("   Turn Bluetooth on")
+fi
+
+choice="$(printf '%s\n' "${menu[@]}" | "${ROFI[@]}" -mesg "$mesg")" || exit 0
+[[ -z "$choice" ]] && exit 0
+
+# ── handle the selection ─────────────────────────────────────────────────────
+case "$choice" in
+    *"Turn Bluetooth off") bluetoothctl power off >/dev/null 2>&1 && notify "󰂲  Bluetooth" "Turned off"; exit 0 ;;
+    *"Turn Bluetooth on")  bluetoothctl power on  >/dev/null 2>&1 && notify "󰂯  Bluetooth" "Turned on";  exit 0 ;;
+    *"Scan for devices")
+        notify "󰂰  Bluetooth" "Scanning, this takes a few seconds…"
+        bluetoothctl --timeout 8 scan on >/dev/null 2>&1
+        exec "$0" ;;
+esac
+
+mac="${MAC_OF[$choice]:-}"
+[[ -z "$mac" ]] && exit 0
+name="${NAME_OF[$mac]:-Unknown device}"
+
+if [[ -n "${CONNECTED_SET[$mac]:-}" ]]; then
+    action="$(printf '%s\n' "   Disconnect" "   Trust device" "󰆴  Forget device" \
+              | "${ROFI[@]}" -mesg "Connected to <b>$name</b>")" || exit 0
+    case "$action" in
+        *Disconnect) bluetoothctl disconnect "$mac" >/dev/null 2>&1 && notify "󰂯  Bluetooth" "Disconnected from $name" ;;
+        *"Trust device") bluetoothctl trust "$mac" >/dev/null 2>&1 && notify "󰂯  Bluetooth" "Trusted $name" ;;
+        *"Forget device") bluetoothctl remove "$mac" >/dev/null 2>&1 && notify "󰆴  Bluetooth" "Forgot $name" ;;
+    esac
+    exit 0
+fi
+
+connect_device "$mac" "$name"

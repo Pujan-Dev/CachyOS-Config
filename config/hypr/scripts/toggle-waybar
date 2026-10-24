@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+#
+# toggle-waybar — hide/show Waybar (SIGUSR1 toggles visibility),
+# or start it if it isn't running at all. Bound to Ctrl+Escape.
+#
+set -u
+
+if pgrep -x waybar >/dev/null 2>&1; then
+    pkill -SIGUSR1 -x waybar
+else
+    setsid waybar >/dev/null 2>&1 </dev/null &
+fi

@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Waybar: microphone — mic icon (crossed when muted) plus input level percentage.
+set -uo pipefail
+source ~/.config/waybar/scripts/lib.sh
+
+raw=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null) || raw=""
+vol=${raw#Volume: }; vol=${vol%% *}
+muted=""; case "$raw" in *MUTED*) muted="muted";; esac
+pct=$(awk -v v="${vol:-0}" 'BEGIN{printf "%d", v*100+0.5}')
+
+if [ -n "$muted" ]; then icon="󰍭"; else icon="󰍬"; fi
+
+wb_json "${icon} ${pct}%" "$muted" \
+        "Microphone ${pct}%\\nLeft-click: mute  ·  Scroll: input volume"

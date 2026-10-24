@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+#
+# wifi-tui — open the impala Wi-Fi TUI in a floating terminal.
+# impala drives iwd, so iwd must be NetworkManager's Wi-Fi backend
+# (see scripts/setup-iwd.sh). Bound to the waybar "network" module.
+
+set -u
+
+if command -v alacritty >/dev/null 2>&1; then
+    exec alacritty --class impala -T impala -e impala
+elif command -v kitty >/dev/null 2>&1; then
+    exec kitty --class impala -T impala impala
+elif command -v foot >/dev/null 2>&1; then
+    exec foot --app-id impala impala
+else
+    exec impala
+fi

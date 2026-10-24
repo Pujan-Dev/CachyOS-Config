@@ -1,0 +1,10 @@
+#!/bin/sh
+# Toggle mako "do not disturb", then nudge waybar (RTMIN+8) so the bell in the
+# bar flips immediately instead of waiting for a poll.
+#
+#   Ctrl+.  /  Super+Shift+N  -> this script (bound in hyprland.conf)
+#   waybar bell               -> click it
+
+makoctl mode -t do-not-disturb
+
+pkill -RTMIN+8 waybar 2>/dev/null || true

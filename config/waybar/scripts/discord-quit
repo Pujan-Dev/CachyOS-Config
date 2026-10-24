@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Gracefully quit Discord, then hard-kill if it refuses. (waybar Discord right-click)
+set -uo pipefail
+
+pgrep -x Discord >/dev/null 2>&1 || exit 0
+
+pkill -TERM -x Discord 2>/dev/null
+
+# give it up to ~3s to shut down cleanly, then force
+for _ in $(seq 1 15); do
+    pgrep -x Discord >/dev/null 2>&1 || break
+    sleep 0.2
+done
+pgrep -x Discord >/dev/null 2>&1 && pkill -KILL -x Discord 2>/dev/null
+
+notify-send -a Discord -u low "Discord" "Closed" 2>/dev/null || true
+pkill -RTMIN+4 waybar 2>/dev/null || true

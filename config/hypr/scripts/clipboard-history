@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#
+# clipboard-history — pick from cliphist's history and put it back on the
+# Wayland clipboard. Bound to Super+V in Hyprland.
+#
+set -uo pipefail
+
+if command -v rofi >/dev/null 2>&1; then
+    menu=(rofi -dmenu -i -p "Clipboard" -display-columns 2
+          -theme-str 'window {width: 640px;}'
+          -theme-str 'listview {lines: 12;}')
+elif command -v wofi >/dev/null 2>&1; then
+    menu=(wofi -d -i -p "Clipboard")
+else
+    command -v notify-send >/dev/null && notify-send "Clipboard" "rofi/wofi not found"
+    exit 1
+fi
+
+sel="$(cliphist list | "${menu[@]}")" || exit 0
+[[ -z "$sel" ]] && exit 0
+
+printf '%s' "$sel" | cliphist decode | wl-copy

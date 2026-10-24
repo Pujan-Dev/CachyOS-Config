@@ -1,0 +1,177 @@
+/* Waybar — Omarchy-style: flat, icon-first, JetBrainsMono Nerd Font. */
+@import "mocha.css";
+
+@define-color discord #5865f2;
+
+* {
+    background-color: @crust;
+    color: @text;
+
+    border: none;
+    border-radius: 0;
+    min-height: 0;
+    font-family: "JetBrainsMono Nerd Font", "JetBrainsMono NF", "MesloLGS Nerd Font Mono", monospace;
+    font-size: 14px;
+}
+
+window#waybar {
+    background-color: @crust;
+    color: @text;
+    transition-property: background-color;
+    transition-duration: 0.2s;
+}
+
+.modules-left {
+    margin-left: 8px;
+}
+
+.modules-right {
+    margin-right: 8px;
+}
+
+/* ---- workspaces ---------------------------------------------------------- */
+#workspaces button {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    color: @overlay0;
+    padding: 0 6px;
+    margin: 0 1.5px;
+    min-width: 9px;
+    transition: color 0.2s ease;
+}
+
+#workspaces button.empty {
+    opacity: 0.45;
+}
+
+#workspaces button:hover {
+    color: @text;
+}
+
+#workspaces button.active {
+    color: @mauve;
+}
+
+#workspaces button.urgent {
+    color: @red;
+}
+
+/* ---- module spacing ------------------------------------------------------ */
+#custom-launcher,
+#custom-dnd,
+#custom-idle,
+#custom-discord,
+#custom-volume,
+#custom-mic,
+#custom-brightness,
+#cpu,
+#battery,
+#network,
+#bluetooth {
+    min-width: 12px;
+    margin: 0 7.5px;
+    transition: color 0.2s ease;
+}
+
+#tray {
+    margin-right: 14px;
+}
+
+#clock {
+    margin: 0 8px;
+}
+
+/* ---- Arch launcher ------------------------------------------------------- */
+#custom-launcher {
+    color: @sapphire;
+    font-size: 17px;
+    margin-left: 2px;
+    margin-right: 10px;
+}
+
+/* ---- hover --------------------------------------------------------------- */
+#custom-launcher:hover,
+#custom-dnd:hover,
+#custom-discord:hover,
+#custom-volume:hover,
+#custom-mic:hover,
+#custom-brightness:hover,
+#cpu:hover,
+#battery:hover,
+#network:hover,
+#bluetooth:hover {
+    color: @mauve;
+}
+
+/* do-not-disturb active (bell off) */
+#custom-dnd.dnd {
+    color: @peach;
+}
+
+/* ---- idle inhibitor ------------------------------------------------------ */
+/* sleep icon = idle actions armed; coffee + teal = hypridle paused (stay awake) */
+#custom-idle.idle-on {
+    color: @overlay0;
+}
+
+#custom-idle.idle-off {
+    color: @teal;
+}
+
+#custom-idle:hover {
+    color: @mauve;
+}
+
+/* ---- states -------------------------------------------------------------- */
+#network.disconnected {
+    color: @overlay0;
+}
+
+#bluetooth.disabled,
+#bluetooth.off {
+    color: @overlay0;
+}
+
+#bluetooth.connected {
+    color: @sapphire;
+}
+
+#custom-volume.muted,
+#custom-mic.muted {
+    color: @overlay0;
+}
+
+/* ---- Discord ------------------------------------------------------------- */
+#custom-discord {
+    color: @overlay0;
+}
+
+#custom-discord.on {
+    color: @discord;
+}
+
+#custom-discord.muted {
+    color: @red;
+}
+
+#battery.warning {
+    color: @yellow;
+}
+
+#battery.critical {
+    color: @red;
+}
+
+/* ---- tooltips ------------------------------------------------------------ */
+tooltip {
+    background-color: @mantle;
+    border: 1px solid @surface1;
+    border-radius: 8px;
+}
+
+tooltip label {
+    color: @text;
+    padding: 4px 6px;
+}

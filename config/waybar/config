@@ -1,0 +1,171 @@
+// Waybar — Omarchy-style layout, wired to this machine's tools.
+{
+    "reload_style_on_change": true,
+    "layer": "top",
+    "position": "top",
+    "spacing": 0,
+    "height": 32,
+
+    "modules-left": ["custom/launcher", "hyprland/workspaces"],
+    "modules-center": ["clock", "custom/idle"],
+    "modules-right": ["custom/dnd", "tray", "bluetooth", "network", "custom/discord", "custom/volume", "custom/mic", "custom/brightness", "cpu", "battery"],
+
+    "custom/dnd": {
+        "exec": "if makoctl mode | grep -q do-not-disturb; then echo '{\"text\":\"󰂛\",\"class\":\"dnd\",\"tooltip\":\"Do Not Disturb ON — notifications hidden\\nClick or Ctrl+.: show notifications\"}'; else echo '{\"text\":\"󰂚\",\"class\":\"on\",\"tooltip\":\"Notifications ON\\nClick or Ctrl+.: do not disturb  ·  right-click: clear all\"}'; fi",
+        "return-type": "json",
+        "interval": "once",
+        "signal": 8,
+        "format": "{}",
+        "on-click": "~/.config/hypr/scripts/dnd-toggle",
+        "on-click-right": "makoctl dismiss -a"
+    },
+
+    "custom/launcher": {
+        "format": "\uf303",
+        "on-click": "wofi --show drun",
+        "on-click-right": "alacritty",
+        "tooltip-format": "App launcher  (Super + R)\nRight-click: terminal"
+    },
+
+    "hyprland/workspaces": {
+        "on-click": "activate",
+        "format": "{icon}",
+        "format-icons": {
+            "default": "\uf111",
+            "1": "1",
+            "2": "2",
+            "3": "3",
+            "4": "4",
+            "5": "5",
+            "6": "6",
+            "7": "7",
+            "8": "8",
+            "9": "9",
+            "10": "0",
+            "active": "󱓻"
+        },
+        "persistent-workspaces": {
+            "1": [],
+            "2": [],
+            "3": [],
+            "4": [],
+            "5": []
+        }
+    },
+
+    "clock": {
+        "format": "{:L%A %H:%M}",
+        "format-alt": "{:L%d %B W%V %Y}",
+        "tooltip-format": "{calendar}"
+    },
+
+    "custom/idle": {
+        "exec": "if pgrep -x hypridle >/dev/null; then echo '{\"text\":\"󰒲\",\"class\":\"idle-on\",\"tooltip\":\"Idle actions ON — dim 5m · lock 5m30s · screen off 5m50s\\nClick or Ctrl+Super+I: keep awake\"}'; else echo '{\"text\":\"󰅶\",\"class\":\"idle-off\",\"tooltip\":\"Idle actions OFF — screen stays awake\\nClick or Ctrl+Super+I: restore\"}'; fi",
+        "return-type": "json",
+        "interval": "once",
+        "signal": 9,
+        "format": "{}",
+        "on-click": "~/.config/hypr/scripts/idle-toggle"
+    },
+
+    "network": {
+        "format-icons": ["󰤯", "󰤟", "󰤢", "󰤥", "󰤨"],
+        "format": "{icon}",
+        "format-wifi": "{icon}",
+        "format-ethernet": "󰈀",
+        "format-disconnected": "󰤮",
+        "tooltip-format-wifi": "{essid}  ({frequency} GHz)\nSignal {signalStrength}%  ·  {ipaddr}\nLeft-click: impala",
+        "tooltip-format-ethernet": "Wired: {ifname}\n{ipaddr}",
+        "tooltip-format-disconnected": "Offline\nLeft-click: impala",
+        "interval": 3,
+        "on-click": "~/.config/waybar/scripts/wifi-tui",
+        "on-click-right": "nmcli radio wifi toggle"
+    },
+
+    "bluetooth": {
+        "format": "󰂯",
+        "format-off": "󰂲",
+        "format-disabled": "󰂲",
+        "format-connected": "󰂱",
+        "format-no-controller": "󰂲",
+        "tooltip-format": "Bluetooth\nLeft-click: manage  ·  Right-click: toggle",
+        "tooltip-format-connected": "{controller_alias}\n\n{device_enumerate}",
+        "tooltip-format-enumerate-connected": "  {device_alias}",
+        "on-click": "~/.config/waybar/scripts/bluetooth-menu",
+        "on-click-right": "bluetoothctl power toggle"
+    },
+
+    "custom/discord": {
+        "exec": "~/.config/waybar/scripts/discord",
+        "return-type": "json",
+        "interval": 2,
+        "signal": 4,
+        "format": "{}",
+        "on-click": "~/.config/waybar/scripts/discord-focus",
+        "on-click-right": "~/.config/waybar/scripts/discord-quit"
+    },
+
+    "custom/volume": {
+        "exec": "~/.config/waybar/scripts/volume",
+        "return-type": "json",
+        "interval": 1,
+        "signal": 2,
+        "format": "{}",
+        "on-click": "pavucontrol",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle; pkill -RTMIN+2 waybar",
+        "on-scroll-up": "wpctl set-volume -l 1.25 @DEFAULT_AUDIO_SINK@ 5%+; pkill -RTMIN+2 waybar",
+        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-; pkill -RTMIN+2 waybar"
+    },
+
+    "custom/mic": {
+        "exec": "~/.config/waybar/scripts/mic",
+        "return-type": "json",
+        "interval": 2,
+        "signal": 3,
+        "format": "{}",
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle; pkill -RTMIN+3 waybar",
+        "on-scroll-up": "wpctl set-volume -l 1.25 @DEFAULT_AUDIO_SOURCE@ 5%+; pkill -RTMIN+3 waybar",
+        "on-scroll-down": "wpctl set-volume @DEFAULT_AUDIO_SOURCE@ 5%-; pkill -RTMIN+3 waybar"
+    },
+
+    "custom/brightness": {
+        "exec": "~/.config/waybar/scripts/brightness",
+        "return-type": "json",
+        "interval": 2,
+        "signal": 1,
+        "format": "{}",
+        "on-scroll-up": "brightnessctl set +5%; pkill -RTMIN+1 waybar",
+        "on-scroll-down": "brightnessctl set 5%-; pkill -RTMIN+1 waybar",
+        "smooth-scrolling-threshold": 5
+    },
+
+    "cpu": {
+        "interval": 5,
+        "format": "󰍛",
+        "tooltip-format": "CPU {usage}%\nLeft-click: btop",
+        "on-click": "alacritty -e btop"
+    },
+
+    "battery": {
+        "interval": 5,
+        "format": "{icon} {capacity}%",
+        "format-charging": "{icon} {capacity}%",
+        "format-plugged": "󰂅 {capacity}%",
+        "format-full": "󰂅 {capacity}%",
+        "format-icons": {
+            "charging": ["󰢜", "󰂆", "󰂇", "󰂈", "󰢝", "󰂉", "󰢞", "󰂊", "󰂋", "󰂅"],
+            "default": ["󰁺", "󰁻", "󰁼", "󰁽", "󰁾", "󰁿", "󰂀", "󰂁", "󰂂", "󰁹"]
+        },
+        "states": {
+            "warning": 20,
+            "critical": 10
+        },
+        "tooltip-format": "{capacity}%  ·  {time}",
+        "on-click-right": "notify-send -u low \"Battery\" \"$(acpi -b 2>/dev/null | head -1)\""
+    },
+
+    "tray": {
+        "icon-size": 15,
+        "spacing": 16
+    }
+}

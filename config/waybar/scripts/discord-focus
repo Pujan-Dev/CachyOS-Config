@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Focus the running Discord window, or launch Discord if it isn't open.
+set -uo pipefail
+
+cls=$(hyprctl clients -j 2>/dev/null \
+        | grep -oiE '"class": *"[^"]*"' \
+        | grep -i discord | head -1 | sed 's/.*: *"//; s/"//')
+
+if [ -n "$cls" ]; then
+    hyprctl dispatch focuswindow "class:^(${cls})$" >/dev/null 2>&1
+else
+    setsid discord >/dev/null 2>&1 &
+fi

@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# Waybar: Discord indicator.
+#   off   = not running
+#   on    = running, not muted
+#   muted = running but muted or deafened (state read from Discord's Local Storage)
+set -uo pipefail
+source ~/.config/waybar/scripts/lib.sh
+
+ICON="󰙯"
+
+if ! pgrep -x Discord >/dev/null 2>&1; then
+    printf '{"text":"%s","class":"off","tooltip":"Discord — not running\\nLeft-click: launch"}\n' "$ICON"
+    exit 0
+fi
+
+LD="$HOME/.config/discord/Local Storage/leveldb"
+state=""
+while IFS= read -r f; do
+    m=$(grep -ao '"mute":\(true\|false\),"deaf":\(true\|false\)' "$f" 2>/dev/null | tail -1)
+    if [ -n "$m" ]; then state="$m"; break; fi
+done < <(ls -t "$LD"/*.log "$LD"/*.ldb 2>/dev/null)
+
+mute=false; deaf=false
+case "$state" in *'"mute":true'*) mute=true ;; esac
+case "$state" in *'"deaf":true'*) deaf=true ;; esac
+
+if [ "$deaf" = true ]; then
+    wb_json "$ICON" "muted" "Discord — deafened\\nLeft-click: focus  ·  Right-click: close"
+elif [ "$mute" = true ]; then
+    wb_json "$ICON" "muted" "Discord — muted\\nLeft-click: focus  ·  Right-click: close"
+else
+    wb_json "$ICON" "on" "Discord — active\\nLeft-click: focus  ·  Right-click: close"
+fi

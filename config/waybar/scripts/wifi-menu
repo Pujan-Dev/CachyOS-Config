@@ -1,0 +1,127 @@
+#!/usr/bin/env bash
+#
+# wifi-menu — a rofi front-end for NetworkManager Wi-Fi.
+# Left-click the waybar "network" module to connect, disconnect,
+# forget, rescan or toggle Wi-Fi.
+
+set -uo pipefail
+
+ROFI=(rofi -dmenu -i -no-custom -p Wi-Fi
+      -theme-str 'window {width: 440px;}'
+      -theme-str 'listview {lines: 12;}'
+      -theme-str 'element-text {vertical-align: 0.5;}')
+
+notify() {
+    command -v notify-send >/dev/null 2>&1 && notify-send -a waybar "$@"
+    return 0
+}
+
+wifi_enabled()  { nmcli -t -f WIFI general 2>/dev/null | grep -q '^enabled'; }
+current_ssid()  { nmcli -t -f ACTIVE,SSID device wifi 2>/dev/null | awk -F: '$1=="yes"{sub(/^[^:]*:/,"");print;exit}'; }
+
+signal_icon() {
+    local s=${1:-0}
+    if   (( s >= 75 )); then printf '󰤨'
+    elif (( s >= 50 )); then printf '󰤥'
+    elif (( s >= 25 )); then printf '󰤢'
+    else                     printf '󰤟'; fi
+}
+
+# in-use \t signal \t security \t ssid  (highest signal first)
+list_networks() {
+    nmcli -t -f IN-USE,SIGNAL,SECURITY,SSID device wifi list --rescan no 2>/dev/null \
+        | while IFS=: read -r inuse signal sec ssid; do
+              [[ -z "$ssid" ]] && continue
+              printf '%s\t%s\t%s\t%s\n' "$signal" "$inuse" "$sec" "$ssid"
+          done \
+        | sort -rn -k1,1
+}
+
+connect_ssid() {
+    local ssid="$1" pass
+    if nmcli --wait 20 device wifi connect "$ssid" >/dev/null 2>&1; then
+        notify "󰤨  Wi-Fi" "Connected to $ssid"
+        return 0
+    fi
+    pass="$(rofi -dmenu -password -p "$ssid" \
+              -mesg "Password for \"$ssid\"" </dev/null)" || return 1
+    [[ -z "$pass" ]] && return 1
+    if printf '%s\n' "$pass" | nmcli --ask --wait 25 device wifi connect "$ssid" >/dev/null 2>&1; then
+        notify "󰤨  Wi-Fi" "Connected to $ssid"
+    else
+        notify "󰤮  Wi-Fi" "Failed to connect to $ssid"
+    fi
+}
+
+# connect to a network that isn't broadcasting its SSID
+connect_hidden() {
+    local ssid pass arg=()
+    ssid="$(rofi -dmenu -p "Hidden SSID" \
+              -mesg "Type the name of the hidden network" </dev/null)" || return 1
+    [[ -z "$ssid" ]] && return 1
+
+    pass="$(rofi -dmenu -password -p "$ssid" \
+              -mesg "Password for \"$ssid\"  (leave empty if open)" </dev/null)" || pass=""
+    [[ -n "$pass" ]] && arg=(password "$pass")
+
+    if nmcli --wait 25 device wifi connect "$ssid" hidden yes "${arg[@]}" >/dev/null 2>&1; then
+        notify "󰤨  Wi-Fi" "Connected to $ssid"
+    else
+        notify "󰤮  Wi-Fi" "Could not connect to $ssid"
+    fi
+}
+
+# ── build the menu ───────────────────────────────────────────────────────────
+declare -A SSID_OF=()
+menu=()
+
+if wifi_enabled; then
+    ssid="$(current_ssid)"
+    mesg="Wi-Fi is <b>on</b>"
+    [[ -n "$ssid" ]] && mesg+=$'\n'"Connected to: <b>$ssid</b>"
+    menu+=("   Turn Wi-Fi off")
+    menu+=("󰑓  Rescan networks")
+    menu+=("󰤨  Connect to hidden network…")
+    while IFS=$'\t' read -r signal inuse sec ssid; do
+        [[ -z "$ssid" ]] && continue
+        cur=""; [[ "$inuse" == "*" ]] && cur="✔ "
+        lock=""; [[ -n "$sec" && "$sec" != "--" ]] && lock="󰌾 "
+        disp="   ${cur}$(signal_icon "$signal") ${lock}${ssid}   ${signal}%"
+        while [[ -n "${SSID_OF[$disp]+x}" ]]; do disp+=" "; done
+        SSID_OF["$disp"]="$ssid"
+        menu+=("$disp")
+    done < <(list_networks)
+else
+    mesg="Wi-Fi is <b>off</b>"
+    menu+=("   Turn Wi-Fi on")
+fi
+
+choice="$(printf '%s\n' "${menu[@]}" | "${ROFI[@]}" -mesg "$mesg")" || exit 0
+[[ -z "$choice" ]] && exit 0
+
+# ── handle the selection ─────────────────────────────────────────────────────
+case "$choice" in
+    *"Turn Wi-Fi off") nmcli radio wifi off && notify "󰤮  Wi-Fi" "Turned off";  exit 0 ;;
+    *"Turn Wi-Fi on")  nmcli radio wifi on  && notify "󰤨  Wi-Fi" "Turned on";   exit 0 ;;
+    *"Rescan networks")
+        notify "󰑓  Wi-Fi" "Scanning for networks…"
+        nmcli device wifi rescan >/dev/null 2>&1
+        sleep 3
+        exec "$0" ;;
+esac
+
+ssid="${SSID_OF[$choice]:-}"
+[[ -z "$ssid" ]] && exit 0
+
+if [[ "$ssid" == "$(current_ssid)" ]]; then
+    action="$(printf '%s\n' "   Disconnect" "   Reconnect" "󰆴  Forget this network" \
+              | "${ROFI[@]}" -mesg "Connected to <b>$ssid</b>")" || exit 0
+    case "$action" in
+        *Disconnect) nmcli connection down id "$ssid" >/dev/null 2>&1 && notify "󰤮  Wi-Fi" "Disconnected from $ssid" ;;
+        *Reconnect)  nmcli connection up   id "$ssid" >/dev/null 2>&1 && notify "󰤨  Wi-Fi" "Reconnected to $ssid" ;;
+        *Forget)     nmcli connection delete id "$ssid" >/dev/null 2>&1 && notify "󰆴  Wi-Fi" "Forgot $ssid" ;;
+    esac
+    exit 0
+fi
+
+connect_ssid "$ssid"

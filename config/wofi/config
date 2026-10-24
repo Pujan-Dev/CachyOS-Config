@@ -1,0 +1,30 @@
+# ~/.config/wofi/config
+# Tuned for speed + a clean, consistent look with the rest of the rice.
+
+# Default mode (waybar + Hyprland both call `wofi --show drun`)
+show=drun
+prompt=Apps
+
+# Layout
+width=32%
+lines=10
+dynamic_lines=true      # shrink the window to fit results (great in dmenu mode)
+columns=1
+
+# Behaviour
+matching=contains       # fastest matching mode (fuzzy would be slower)
+insensitive=true        # case-insensitive search
+sort_order=default      # drun: most-used apps float to the top (via cache)
+exec_search=false
+no_custom_entry=false
+
+# Performance: update results ~instantly instead of every 100ms.
+# NOTE: do NOT use filter_rate=0 here — combined with `lines` above, wofi
+# collapses the window to a 1px-tall invisible surface. 1ms is imperceptible.
+filter_rate=1
+
+# Look
+gtk_dark=true
+hide_scroll=true
+allow_images=false      # text-only list (no app icons) — also faster to open
+layer=overlay           # always render above other windows
